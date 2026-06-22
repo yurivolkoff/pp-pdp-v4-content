@@ -1,0 +1,814 @@
+<!-- Design library: design/library/promotionpros-pdp.md -->
+<!--
+  PDP v4 CONTENT — PromotionPros
+  Renders the hand-authored v4 seoContent copy for 3 products inside the canonical 17-element PDP
+  content blueprint (base layout reused from design/prototypes/2026-05-25-pdp-content-full/index.html
+  — the pp-pdp-content / #spec prototype: same CSS tokens, chrome, stacked collapsible sections, buy box).
+
+  THE POINT OF v4 — make the seoContent-vs-platform boundary VISIBLE.
+  Two surface treatments coexist on one PDP:
+    (A) seoContent-AUTHORED surfaces  → orange field-name tag (e.g. `title`, `at_a_glance_buyer[]`).
+        These are the copy fields the DeepSeek seoContent agent emits and the prototype renders EXACTLY.
+    (B) PLATFORM-RENDERED surfaces    → muted blue tint + "platform" badge. The structured UI the PDP
+        already renders from its own data (price/tiers, color swatches, reviews ★, fulfillment/production,
+        quantity, sizing, risk-reducers, breadcrumb category). seoContent must NOT duplicate these — they
+        appear here as clearly-labeled REPRESENTATIVE scaffolding so a reviewer can see the copy coexists
+        with the structured UI WITHOUT repeating it. Values in (B) are illustrative placeholders, not feed data.
+
+  v4 FIELD -> PDP SLOT (contract: notes/2026-06-22-v4-content-contract.md):
+    title                       -> Product H1 (buy box)                         [seoContent]
+    short_description           -> Subtitle under H1                            [seoContent]
+    at_a_glance_buyer[]         -> above-fold "Key features at-a-glance" module  [seoContent]
+    long_description            -> Description section intro prose               [seoContent]
+    benefit_bullets[]           -> benefit-headed bullets ("**Label:** text")    [seoContent]
+    product_highlights[]        -> Product Highlights module (product facts)     [seoContent]
+    decoration_prose            -> prose intro of Decoration & Imprint section   [seoContent]
+                                   (per-method UI below it is platform-rendered)
+    spec_table[]                -> Specifications table                          [seoContent]
+    seo.{urlSlug,metaTitle,metaDescription} -> collapsible SEO/Google reviewer panel + <title>/<meta>
+    google_merchant_description -> SEO panel, labeled "Google Merchant — not on PDP body"
+
+  Content is rendered byte-for-byte from the source JSON (mirrors products-data.json). Nothing is
+  rewritten, summarized, shortened, or fabricated. **bold** in copy -> <strong>; otherwise plain text.
+  Null/empty fields render a graceful empty state.
+
+  STRUCTURE: real PP chrome (header/nav/footer) · 3-product sticky navbar (deep-link #<vendorId>_<mpn>)
+  · above-fold buy box + at-a-glance · stacked collapsible content sections (Baymard B-PDP002).
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDP v4 Content | PromotionPros</title>
+<meta name="description" id="metaDescTag" content="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#001542;--navy-h:#001028;--orange:#FE5000;--orange-h:#d44200;
+  --ink:#111;--text:#525252;--muted:#999;--border:#e5e5e5;--gray:#f5f5f5;
+  --success:#22a722;--tier:#fff3ec;--maxw:1200px;
+  /* seoContent (authored copy) accent */
+  --seo:#c2410c;--seo-bg:#fff6f0;--seo-bd:#f4cbb0;
+  /* platform (structured UI, not seoContent) accent */
+  --plat:#3a5b97;--plat-bg:#f1f5fb;--plat-bd:#cdddf0;
+}
+body{font-family:'Lato',sans-serif;font-size:16px;color:var(--text);line-height:1.5;background:#fff}
+h1,h2,h3,h4{color:var(--ink);line-height:1.2}
+
+/* DEMO BAR + LEGEND */
+.demo-bar{background:var(--navy);color:#fff;display:flex;align-items:center;gap:14px;padding:9px 22px;flex-wrap:wrap;position:sticky;top:0;z-index:70}
+.demo-bar .tag{font-size:11px;font-weight:900;letter-spacing:.12em;background:var(--orange);padding:4px 9px;border-radius:3px}
+.demo-bar .lbl{font-size:12.5px;color:#9fb0d4;max-width:560px;line-height:1.4}
+.legend{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.legend .lg{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#dde4f2;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);padding:4px 10px;border-radius:50rem}
+.legend .sw{width:11px;height:11px;border-radius:3px;flex:none}
+.legend .sw.seo{background:var(--seo);box-shadow:0 0 0 2px var(--seo-bg)}
+.legend .sw.plat{background:var(--plat);box-shadow:0 0 0 2px var(--plat-bg)}
+
+/* PRODUCT NAVBAR */
+.pnav{background:#fff;border-bottom:2px solid var(--border);position:sticky;top:40px;z-index:65;box-shadow:0 1px 6px rgba(0,0,0,.05)}
+.pnav-inner{display:flex;align-items:stretch;max-width:var(--maxw);margin:0 auto;padding:0 20px;gap:0;overflow-x:auto}
+.pnav-lead{display:flex;flex-direction:column;justify-content:center;padding:6px 16px 6px 0;border-right:1px solid var(--border);margin-right:8px;white-space:nowrap}
+.pnav-lead .pl-tag{font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:var(--seo)}
+.pnav-lead .pl-sub{font-size:10.5px;color:var(--muted);margin-top:1px}
+.pnav button{flex:0 0 auto;background:none;border:0;border-bottom:3px solid transparent;font-family:inherit;cursor:pointer;padding:9px 16px;text-align:left;min-width:130px;white-space:nowrap}
+.pnav button:hover{background:var(--gray)}
+.pnav .case{display:block;font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pnav .pname{display:block;font-size:13px;font-weight:700;color:var(--text);margin-top:2px}
+.pnav button.on .case{color:var(--orange)}
+.pnav button.on .pname{color:var(--ink)}
+.pnav button.on{border-bottom-color:var(--orange)}
+
+/* HEADER / NAV / FOOTER (chrome) */
+.site-header{background:#fff;border-bottom:1px solid var(--border);padding:12px 0}
+.header-inner{display:flex;align-items:center;gap:20px;max-width:var(--maxw);margin:0 auto;padding:0 20px}
+.site-logo{font-weight:900;font-size:23px;color:var(--navy);text-decoration:none}
+.site-logo b{color:var(--orange)}
+.header-search{flex:1;display:flex}
+.header-search input{flex:1;height:42px;border:1px solid var(--border);border-right:none;border-radius:50rem 0 0 50rem;padding:0 18px;font-family:inherit;font-size:14px;outline:none}
+.search-btn{width:50px;height:42px;background:var(--navy);border:none;color:#fff;border-radius:0 50rem 50rem 0;cursor:pointer}
+.header-actions{display:flex;gap:18px;font-size:12px}
+.hdr-link{color:var(--text);text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:2px}
+.hdr-icon{font-size:19px}
+.site-nav{background:#fff;border-bottom:2px solid var(--border)}
+.nav-inner{display:flex;max-width:var(--maxw);margin:0 auto;padding:0 20px}
+.nav-allcat{background:var(--navy);color:#fff;height:50px;padding:0 22px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;text-decoration:none}
+.nav-links{display:flex;align-items:center;list-style:none;overflow:hidden}
+.nav-links li a{display:block;padding:13px 18px;font-size:15px;color:var(--ink);text-decoration:none;white-space:nowrap}
+.nav-links li a.hot{color:var(--orange);font-weight:700}
+.site-footer{background:var(--navy);color:#c7d2e8;margin-top:44px;padding:30px 0}
+.footer-inner{max-width:var(--maxw);margin:0 auto;padding:0 20px;display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap}
+.footer-news b{color:#fff;font-size:16px;display:block;margin-bottom:8px}
+.footer-news input{height:40px;border:0;padding:0 14px;width:230px;font-family:inherit}
+.footer-news button{height:40px;background:var(--orange);color:#fff;border:0;padding:0 18px;font-weight:700;cursor:pointer;font-family:inherit}
+.footer-cols{display:flex;gap:40px;font-size:13px}
+.footer-cols b{color:#fff;display:block;margin-bottom:8px}
+.footer-cols a{color:#c7d2e8;text-decoration:none;display:block;padding:2px 0}
+
+/* LAYOUT */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px}
+.breadcrumb-bar{background:var(--gray);padding:9px 0;border-bottom:1px solid var(--border)}
+.bc{font-size:13px;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.bc a{color:var(--text);text-decoration:none}
+.product-section{display:grid;grid-template-columns:1fr 430px;gap:40px;align-items:start;margin-top:24px}
+.left-col{min-width:0}
+
+/* ===== surface tagging — the load-bearing v4 distinction ===== */
+/* seoContent field tag (authored copy) */
+.ftag{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:900;letter-spacing:.02em;
+  font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--seo);background:var(--seo-bg);
+  border:1px solid var(--seo-bd);border-radius:50rem;padding:1px 8px;text-transform:none;vertical-align:middle}
+.ftag::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--seo)}
+/* platform badge (structured UI, not seoContent) */
+.ptag{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:900;letter-spacing:.03em;
+  color:var(--plat);background:var(--plat-bg);border:1px solid var(--plat-bd);border-radius:50rem;
+  padding:1px 8px;text-transform:uppercase;vertical-align:middle}
+.ptag::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--plat)}
+/* a block the PLATFORM renders (not seoContent) gets a subtle tint + left rule */
+.plat-block{background:var(--plat-bg);border:1px solid var(--plat-bd);border-left:3px solid var(--plat);border-radius:8px;padding:13px 15px}
+.plat-block .pb-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.plat-block .pb-head .pb-ttl{font-size:12px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--plat)}
+.plat-note{font-size:11px;color:var(--plat);opacity:.85;margin-top:8px;line-height:1.4;font-style:italic}
+
+/* gallery (platform) */
+.gallery-main{position:relative;border:1px solid var(--border);aspect-ratio:1/1;display:grid;place-items:center;background:var(--gray);overflow:hidden}
+.gallery-main .ico{width:44%;height:44%;color:var(--navy)}
+.gallery-main .ph-note{position:absolute;bottom:10px;left:10px;background:rgba(255,255,255,.92);font-size:11px;font-weight:700;color:var(--muted);padding:4px 9px;border-radius:50rem}
+.gallery-thumbs{display:flex;gap:8px;margin-top:10px}
+.gallery-thumbs .t{width:64px;height:64px;border:1px solid var(--border);background:var(--gray);display:grid;place-items:center;color:var(--muted)}
+.gallery-thumbs .t svg{width:42%;height:42%}
+.gallery-thumbs .t.on{border-color:var(--orange)}
+
+/* AT-A-GLANCE (seoContent, above-fold) */
+.glance{margin-top:18px;border:1px solid var(--seo-bd);background:var(--seo-bg);border-radius:8px;padding:15px 17px}
+.glance-hd{display:flex;align-items:center;gap:9px;margin-bottom:11px;flex-wrap:wrap}
+.glance-hd b{font-size:13px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:var(--ink)}
+.glance ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+.glance li{font-size:14px;color:var(--ink);padding-left:26px;position:relative;line-height:1.5}
+.glance li svg{position:absolute;left:0;top:2px;width:16px;height:16px;color:var(--seo)}
+
+/* buy box */
+.bb-title{font-size:25px;font-weight:900;color:var(--ink);margin-bottom:6px;line-height:1.18}
+.bb-titlerow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.bb-sub{font-size:14.5px;color:var(--ink);margin-bottom:8px;line-height:1.55;font-weight:700}
+.bb-subrow{margin-bottom:16px}
+.bb-rating{display:flex;align-items:center;gap:8px;font-size:13.5px;flex-wrap:wrap}
+.stars{color:var(--orange);letter-spacing:1px}
+.bb-rating a{color:var(--navy);text-decoration:none;font-weight:700}
+.bb-block{border-top:1px solid var(--border);padding:14px 0}
+.bb-price{display:flex;align-items:baseline;gap:10px}
+.bb-price .amt{font-size:30px;font-weight:900;color:var(--orange)}
+.bb-price .ea{font-size:14px;color:var(--text);font-weight:700}
+.bb-perunit{font-size:12.5px;color:var(--text);margin-top:4px}
+.fulfil{font-size:13.5px;color:var(--ink)}
+.fulfil .row{display:flex;gap:8px;align-items:flex-start;margin-bottom:5px}
+.fulfil svg{width:15px;height:15px;color:var(--plat);flex:none;margin-top:2px}
+.fulfil b{color:var(--ink)}
+.fulfil .hi{color:var(--success);font-weight:700}
+.lbl{font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--navy);margin-bottom:9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.swatches{display:flex;gap:9px;flex-wrap:wrap}
+.swatch{width:34px;height:34px;border-radius:50%;border:1px solid rgba(0,0,0,.2);cursor:pointer}
+.swatch.on{box-shadow:0 0 0 3px var(--plat-bg),0 0 0 5px var(--plat)}
+.qty-cta{display:flex;gap:10px;align-items:center;margin-top:6px}
+.qty-input{width:84px;height:46px;border:1px solid var(--border);text-align:center;font-family:inherit;font-size:16px;font-weight:700;color:var(--ink)}
+.btn-cta{flex:1;height:46px;background:var(--orange);color:#fff;border:0;font-family:inherit;font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:.02em;cursor:pointer}
+.btn-cta:hover{background:var(--orange-h)}
+.trust-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--text);font-weight:700}
+.trust-row span{display:flex;align-items:center;gap:5px}
+.trust-row svg{width:14px;height:14px;color:var(--plat)}
+
+/* stacked sections */
+.lc-sections{margin-top:30px}
+.psec{border-top:1px solid var(--border)}
+.psec:last-child{border-bottom:1px solid var(--border)}
+.psec-hdr{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 2px;cursor:pointer;background:none;border:0;width:100%;font-family:inherit;text-align:left;user-select:none}
+.psec-hdr:hover .psec-title{color:var(--orange)}
+.psec-title{font-size:18px;font-weight:900;color:var(--ink);display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.psec-title .badge{background:var(--orange);color:#fff;font-size:11px;font-weight:900;padding:1px 9px;border-radius:50rem}
+.psec-chev{color:var(--orange);transition:transform .2s ease;flex:none}
+.psec:not(.open) .psec-chev{transform:rotate(-90deg)}
+.psec-body{display:none;padding:0 2px 24px}
+.psec.open .psec-body{display:block}
+.subhd{font-size:12px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--navy);margin:18px 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.subhd:first-child{margin-top:2px}
+
+/* content bits */
+.prose{font-size:14.5px;color:var(--text);line-height:1.7;margin-bottom:4px}
+.flist{list-style:none;display:flex;flex-direction:column;gap:10px;margin:2px 0 4px}
+.flist li{font-size:14px;padding-left:24px;position:relative;line-height:1.55}
+.flist li::before{content:"";position:absolute;left:0;top:7px;width:9px;height:9px;background:var(--orange);border-radius:2px}
+.flist b,.flist strong{color:var(--ink)}
+.highlights{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:2px}
+.hl{border:1px solid var(--border);padding:14px;border-radius:6px;display:flex;gap:11px;align-items:flex-start}
+.hl .hi{width:26px;height:26px;color:var(--navy);flex:none;margin-top:1px}
+.hl p{font-size:13.5px;color:var(--ink);line-height:1.45;font-weight:700}
+.spectable{width:100%;border-collapse:collapse;max-width:620px}
+.spectable td{padding:9px 14px;border-bottom:1px solid var(--border);font-size:14px}
+.spectable tr:nth-child(even){background:var(--gray)}
+.spectable td:first-child{color:var(--text);font-weight:700;width:40%}
+.spectable td:last-child{color:var(--ink);font-weight:700}
+
+/* decoration */
+.deco-prose{font-size:14.5px;color:var(--text);line-height:1.7;margin-bottom:6px}
+.deco-mini{display:flex;flex-direction:column;gap:10px;max-width:680px;margin-top:4px}
+.deco-row{border:1px solid var(--plat-bd);background:var(--plat-bg);padding:11px 14px;display:flex;align-items:center;gap:12px;border-radius:6px}
+.deco-row .dn{font-weight:900;color:var(--plat);font-size:14px;flex:1}
+.deco-row .dp{font-size:12.5px;color:var(--text)}
+.deco-row .dp b{color:var(--ink)}
+.deco-empty{border:1px dashed var(--border);border-radius:6px;padding:16px;background:var(--gray);max-width:680px;display:flex;gap:12px;align-items:flex-start}
+.deco-empty svg{width:22px;height:22px;color:var(--navy);flex:none;margin-top:1px}
+.deco-empty b{display:block;color:var(--ink);font-size:14px;margin-bottom:3px}
+.deco-empty p{font-size:13px;color:var(--text);line-height:1.5}
+
+/* reviews / sizing / shipping (platform) — neutral representative scaffolding */
+.rev-top{display:flex;gap:34px;flex-wrap:wrap;align-items:flex-start;margin-bottom:6px;max-width:680px}
+.rev-score{text-align:center}
+.rev-score .big{font-size:40px;font-weight:900;color:var(--ink);line-height:1}
+.rev-score .st{color:var(--orange);font-size:17px}
+.rev-score .ct{font-size:12.5px;color:var(--text);margin-top:3px}
+.rev-hist{flex:1;min-width:240px}
+.hist-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);margin-bottom:3px}
+.hist-row .bar{flex:1;height:9px;background:#fff;border:1px solid var(--plat-bd);border-radius:5px;overflow:hidden}
+.hist-row .fill{height:100%;background:var(--plat)}
+.size-tbl{width:100%;border-collapse:collapse;max-width:560px}
+.size-tbl th,.size-tbl td{border:1px solid var(--plat-bd);padding:7px 12px;font-size:13px;text-align:center}
+.size-tbl th{background:#fff;color:var(--plat);font-weight:900}
+.ship-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:640px}
+.ship-card{border:1px solid var(--plat-bd);background:#fff;border-radius:6px;padding:13px}
+.ship-card b{display:block;color:var(--ink);font-size:13px;margin-bottom:5px}
+.ship-card p{font-size:13px;color:var(--text);line-height:1.5}
+
+/* cross-sell (platform) */
+.xsell{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.xcard{border:1px solid var(--plat-bd);border-radius:6px;overflow:hidden;background:#fff}
+.xcard .xi{aspect-ratio:1/1;background:var(--gray);display:grid;place-items:center;color:var(--navy)}
+.xcard .xi svg{width:44%;height:44%}
+.xcard .xb{padding:10px}
+.xcard .xn{font-size:13px;font-weight:700;color:var(--ink);line-height:1.3}
+.xcard .xr{font-size:11.5px;color:var(--text);margin-top:3px}
+
+/* SEO / Google reviewer panel (not part of the live PDP body) */
+.seo-panel{max-width:780px;margin:30px auto 0;border:1px dashed var(--seo-bd);background:var(--seo-bg);border-radius:8px}
+.seo-hdr{display:flex;align-items:center;gap:9px;padding:13px 16px;cursor:pointer;background:none;border:0;width:100%;font-family:inherit;text-align:left;color:var(--seo);font-weight:900;font-size:14px}
+.seo-hdr .stag{font-size:10.5px;font-weight:900;letter-spacing:.06em;background:var(--seo);color:#fff;padding:2px 9px;border-radius:50rem}
+.seo-hdr .schev{margin-left:auto;transition:transform .2s ease}
+.seo-panel:not(.open) .schev{transform:rotate(-90deg)}
+.seo-body{display:none;padding:0 16px 18px}
+.seo-panel.open .seo-body{display:block}
+.seo-field{margin-top:15px}
+.seo-field .fl{font-size:11px;font-weight:900;letter-spacing:.04em;text-transform:none;color:var(--seo);margin-bottom:4px;font-family:ui-monospace,Menlo,Consolas,monospace}
+.seo-field .fl .off{text-transform:uppercase;letter-spacing:.05em;font-size:9.5px;color:#fff;background:var(--muted);border-radius:50rem;padding:1px 7px;margin-left:7px;font-family:'Lato',sans-serif}
+.seo-field .fv{font-size:13.5px;color:#5a4a33;line-height:1.55;font-family:ui-monospace,Menlo,Consolas,monospace;background:#fff;border:1px solid var(--seo-bd);border-radius:4px;padding:8px 11px;white-space:pre-wrap}
+.serp{background:#fff;border:1px solid var(--seo-bd);border-radius:6px;padding:12px 14px;margin-top:6px;font-family:Arial,sans-serif}
+.serp .surl{font-size:12.5px;color:#202124}
+.serp .surl .dom{color:#5f6368}
+.serp .stit{font-size:18px;color:#1a0dab;line-height:1.3;margin:2px 0 3px}
+.serp .sdesc{font-size:13px;color:#4d5156;line-height:1.5}
+
+@media (max-width:980px){
+  .product-section{grid-template-columns:1fr;gap:26px}
+  .highlights,.xsell{grid-template-columns:repeat(2,1fr)}
+  .ship-grid{grid-template-columns:1fr}
+  .legend{margin-left:0}
+}
+@media (max-width:560px){
+  .highlights,.xsell{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="demo-bar">
+  <span class="tag">PROTOTYPE</span>
+  <span class="lbl">PDP v4 content — hand-authored copy in the canonical 17-element PDP. The point: seoContent copy COEXISTS with the structured UI without repeating it.</span>
+  <div class="legend">
+    <span class="lg"><span class="sw seo"></span>seoContent (authored copy)</span>
+    <span class="lg"><span class="sw plat"></span>platform-rendered (not seoContent)</span>
+  </div>
+</div>
+
+<!-- PRODUCT NAVBAR — 3 products, deep-linkable by #<vendorId>_<mpn> -->
+<nav class="pnav"><div class="pnav-inner" id="pnav"></div></nav>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="#" class="site-logo">Promotion<b>Pros</b></a>
+    <div class="header-search"><input placeholder="Search 500,000+ promo products..."><button class="search-btn">&#128269;</button></div>
+    <div class="header-actions">
+      <a href="#" class="hdr-link"><span class="hdr-icon">&#128222;</span><span>Call</span></a>
+      <a href="#" class="hdr-link"><span class="hdr-icon">&#128100;</span><span>Account</span></a>
+      <a href="#" class="hdr-link"><span class="hdr-icon">&#128722;</span><span>Cart</span></a>
+    </div>
+  </div>
+</header>
+<nav class="site-nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-allcat">&#9776;&ensp;All Categories</a>
+    <ul class="nav-links">
+      <li><a href="#">Budget Buys</a></li><li><a href="#">Apparel</a></li><li><a href="#">Bags</a></li>
+      <li><a href="#">Drinkware</a></li><li><a href="#">Office &amp; Awards</a></li><li><a href="#">Stationery</a></li>
+      <li><a href="#" class="hot">Hot Products</a></li><li><a href="#" class="hot">On Sale</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="breadcrumb-bar"><div class="wrap"><div class="bc" id="crumb"></div></div></div>
+
+<div class="wrap">
+  <div class="product-section">
+    <!-- LEFT: gallery + at-a-glance + content sections -->
+    <div class="left-col">
+      <div class="gallery-main">
+        <svg class="ico" id="galIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"></svg>
+        <span class="ph-note">Image — platform-rendered (not seoContent)</span>
+      </div>
+      <div class="gallery-thumbs" id="galThumbs"></div>
+      <!-- above-fold at-a-glance (seoContent) -->
+      <div id="glance"></div>
+      <div class="lc-sections" id="sections"></div>
+    </div>
+    <!-- RIGHT: buy box -->
+    <div class="buybox" id="buybox"></div>
+  </div>
+
+  <!-- SEO / Google reviewer panel -->
+  <div class="seo-panel" id="seoPanel"></div>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-news"><b>Get weekly promotional ideas for your business</b><form onsubmit="return false"><input placeholder="Enter your email..."><button>Subscribe</button></form></div>
+    <div class="footer-cols">
+      <div><b>Information</b><a href="#">About Us</a><a href="#">Blog</a></div>
+      <div><b>Customer Service</b><a href="#">Contact</a><a href="#">Art Guidelines</a></div>
+      <div><b>My Account</b><a href="#">Orders</a><a href="#">Cart</a></div>
+    </div>
+  </div>
+</footer>
+
+<!-- ===== PRODUCTS DATA =====
+  `content` = the v4 seoContent JSON, copied byte-for-byte from _temporary/afk-enrichment/_v4-gold/*.v4.json
+              (mirrors products-data.json). Rendered EXACTLY — never rewritten/summarized/fabricated.
+  `platform` = REPRESENTATIVE structured-UI scaffolding (price/tiers/colors/reviews/fulfillment/sizing/
+              cross-sell). NOT feed data and NOT seoContent — illustrative placeholders so the reviewer
+              can see the copy coexists with the platform UI. Clearly labeled "platform-rendered" in the UI.
+-->
+<script id="productsData" type="application/json">
+[
+ {
+  "vendorId": "14",
+  "mpn": "46087",
+  "id": "14_46087",
+  "navCase": "Drinkware",
+  "category": "Drinkware",
+  "icon": "cup",
+  "crumb": ["Home", "Drinkware", "Can & Bottle Coolers"],
+  "content": {
+    "title": "Koozie® Custom Bottle Opener Can & Bottle Cooler",
+    "short_description": "A neoprene can-and-bottle cooler with a built-in opener that folds flat for mailing — a practical, logo-ready giveaway that travels to every tailgate and cookout.",
+    "at_a_glance_buyer": [
+      "Mails flat in a standard envelope, so your logo reaches recipients before the event even starts.",
+      "The built-in opener earns your brand a glance every time someone cracks open a drink.",
+      "Wetsuit-like neoprene shrugs off moisture and use, so it keeps showing your logo season after season."
+    ],
+    "long_description": "Hand someone the Koozie® Bottle Opener Can & Bottle Cooler and you hand them a reason to keep your brand close. The neoprene sleeve hugs a can or bottle like a wetsuit, holding the chill in and the sweat off their hands, while a metal opener sits flush against the side — ready the moment a cap needs popping. What makes it a marketer's favorite is how it travels: it collapses completely flat, so it tucks into a welcome bag, a trade-show envelope, or a direct-mail piece without adding bulk or postage. From the cookout to the tailgate to the back of a desk drawer that gets raided every Friday, it puts your logo exactly where casual, repeated impressions happen.",
+    "benefit_bullets": [
+      "**Logo that travels light:** Because it folds completely flat, you can mail it in a standard envelope or slip it into a welcome kit — turning a low-cost item into a wide-reach branded touchpoint.",
+      "**Repeat brand exposure:** The attached opener gives recipients a reason to reach for your cooler again and again, so your logo gets seen well beyond the first use.",
+      "**Built to keep showing up:** The moisture-resistant neoprene holds its shape and finish through real use, so your branding stays sharp instead of fading into a drawer."
+    ],
+    "product_highlights": [
+      "2.5mm neoprene body with a soft, wetsuit-like feel",
+      "Built-in aluminum bottle opener, permanently attached to the sleeve",
+      "Folds completely flat",
+      "Fits both standard cans and bottles"
+    ],
+    "decoration_prose": "Your artwork prints on the face of the cooler, where it stays front-and-center in hand. Choose a spot-color imprint for a clean, bold logo with crisp edges, or full-color when your design calls for gradients, photography, or detailed multi-color art. Spot color suits simple wordmarks and one- or two-color logos; full color is the pick when reproduction fidelity matters most.",
+    "spec_table": [
+      { "label": "Material", "value": "Neoprene, Aluminum" },
+      { "label": "Height", "value": "3.875\"" }
+    ],
+    "seo": {
+      "urlSlug": "koozie-bottle-opener-can-bottle-cooler",
+      "metaTitle": "Koozie® Custom Bottle Opener Can & Bottle Cooler | PromotionPros",
+      "metaDescription": "Custom Koozie® can and bottle cooler with a built-in opener and 2.5mm neoprene body that folds flat for mailing. Add your logo for tailgates, events, and giveaways."
+    },
+    "google_merchant_description": "Koozie® Bottle Opener Can & Bottle Cooler customized with your logo. A 2.5mm neoprene sleeve fits both cans and bottles and keeps drinks cold, with a permanently attached aluminum bottle opener on the side. Folds completely flat to mail in a standard envelope or pack into welcome kits. Imprint your brand in spot color or full color. A durable, practical promotional giveaway for tailgates, cookouts, events, and corporate gifting."
+  },
+  "platform": {
+    "price": "$2.18", "priceAt": "/ ea at 200",
+    "tiers": "200 → $2.18 · 500 → $1.96 · 1,000 → $1.74 · 2,500 → $1.52 each",
+    "rating": "4.7", "reviewCount": 64,
+    "ratingHist": [["5",83],["4",11],["3",4],["2",1],["1",1]],
+    "swatches": [["Red","b3242c",1],["Black","1a1a1a"],["Royal","1d4f9e"],["Orange","e8650f"],["Lime Green","8bbf2a"],["Navy","001E62"]],
+    "production": "5 business days after proof approval",
+    "delivery": "Arrives by Mon, Jun 8 with standard shipping",
+    "freeShip": "Free shipping over $250",
+    "decoMethods": [
+      ["Spot Color", "Side 1 · setup $55 / order"],
+      ["Full Color", "Side 1"]
+    ],
+    "sizing": null,
+    "xsell": [["Folding Can Cooler", "4.6 (120)"],["Slim Can Sleeve", "4.5 (88)"],["Neoprene Bottle Cooler", "4.7 (54)"],["Collapsible Koozie® Kooler", "4.8 (210)"]]
+  }
+ },
+ {
+  "vendorId": "62",
+  "mpn": "ST450",
+  "id": "62_ST450",
+  "navCase": "Apparel",
+  "category": "Apparel",
+  "icon": "shirt",
+  "crumb": ["Home", "Apparel", "T-Shirts"],
+  "content": {
+    "title": "Sport-Tek® PosiCharge® Competitor Cotton Touch Custom Tee",
+    "short_description": "A performance tee with the soft hand of cotton and color-locking PosiCharge® technology — a comfortable, everyday canvas that keeps your logo and team colors looking sharp.",
+    "at_a_glance_buyer": [
+      "PosiCharge® color-locking keeps your imprinted logo and brand colors from fading wash after wash.",
+      "Cotton-soft feel makes it a tee people actually wear, putting your brand into everyday rotation.",
+      "Moisture-wicking performance suits active events, staff uniforms, and team gear alike."
+    ],
+    "long_description": "The Sport-Tek® PosiCharge® Competitor Cotton Touch Tee solves the tradeoff that usually forces a choice between comfort and performance. It wears like a favorite cotton tee — soft to the touch, with a clean matte finish and no scratchy tag to cut out — yet underneath it's a moisture-wicking performance jersey built to move. The detail that matters most for branding is PosiCharge® technology: it locks color into the fabric, so the logo you print and the colors you choose stay vivid through repeated washing instead of dulling after a few cycles. That durability is what makes it earn its keep as staff wear, team apparel, or event giveaways — the kind of shirt that stays in someone's rotation and keeps your brand visible long after the event is over.",
+    "benefit_bullets": [
+      "**Branding that lasts:** PosiCharge® locks color into the fabric, so your decorated logo and brand colors resist fading and stay crisp wash after wash — keeping your brand presentable for the long haul.",
+      "**A tee people choose to wear:** The soft cotton hand and matte finish make it comfortable enough for everyday wear, which means more days your logo is out in the world.",
+      "**Ready for active settings:** Moisture-wicking performance keeps wearers comfortable at races, on the floor, or on the team — so your branded apparel looks good while it works."
+    ],
+    "product_highlights": [
+      "4.7-ounce, 100% spun polyester jersey with PosiCharge® color-locking technology",
+      "Soft cotton hand with a matte finish",
+      "Set-in sleeves with dyed-to-match neck taping",
+      "Removable tag for comfort and relabeling"
+    ],
+    "decoration_prose": "This tee gives your decorator a smooth, even canvas across the chest and back for a logo, team name, or event graphic. Because the body is a spun-polyester performance jersey, choose the decoration approach that best suits your artwork and pairs well with the fabric — your decorator can advise on the method that delivers the cleanest result on this material.",
+    "spec_table": [
+      { "label": "Material", "value": "100% spun polyester jersey" }
+    ],
+    "seo": {
+      "urlSlug": "sport-tek-posicharge-competitor-cotton-touch-tee",
+      "metaTitle": "Sport-Tek® PosiCharge® Cotton Touch Custom Tee | PromotionPros",
+      "metaDescription": "Custom Sport-Tek® PosiCharge® Competitor Cotton Touch tee — a soft, cotton-feel performance jersey with color-locking technology that keeps your logo vivid. Add your brand for teams, staff, and events."
+    },
+    "google_merchant_description": "Sport-Tek® PosiCharge® Competitor Cotton Touch Tee customized with your logo. A 4.7-ounce, 100% spun polyester performance jersey with a soft cotton hand and matte finish, featuring PosiCharge® technology that locks in color so imprinted logos and brand colors resist fading. Includes set-in sleeves, dyed-to-match neck taping, and a removable tag for comfort and relabeling. Moisture-wicking and comfortable for team apparel, staff uniforms, and event giveaways."
+  },
+  "platform": {
+    "price": "$6.48", "priceAt": "/ ea at 144",
+    "tiers": "36 → $7.20 · 144 → $6.48 · 288 → $6.02 · 576 → $5.55 each",
+    "rating": "4.8", "reviewCount": 312,
+    "ratingHist": [["5",88],["4",9],["3",2],["2",0],["1",1]],
+    "swatches": [["Black","1a1a1a",1],["True Navy","1b2a4a"],["True Red","b3242c"],["Iron Grey","6c6f73"],["Kelly Green","2a8a3e"],["Atomic Blue","2f7fc1"],["White","f4f4f2"]],
+    "production": "5 business days after proof approval",
+    "delivery": "Arrives by Tue, Jun 9 with standard shipping",
+    "freeShip": "Free shipping over $250",
+    "decoMethods": [],
+    "sizing": {
+      "note": "Adult sizes. Tagless; relabel-ready. Athletic cut — order a size up for a relaxed fit.",
+      "cols": ["Size", "XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"],
+      "rows": [["Chest (in)", "31-34", "34-37", "38-41", "42-45", "46-49", "50-53", "54-57", "58-61"]]
+    },
+    "xsell": [["PosiCharge® Long-Sleeve Tee", "4.8 (140)"],["Competitor V-Neck Tee", "4.7 (96)"],["Performance Polo", "4.9 (203)"],["Tri-Blend Wicking Tee", "4.6 (177)"]]
+  }
+ },
+ {
+  "vendorId": "22",
+  "mpn": "3681",
+  "id": "22_3681",
+  "navCase": "Awards",
+  "category": "Awards",
+  "icon": "award",
+  "crumb": ["Home", "Office & Awards", "Crystal Awards"],
+  "content": {
+    "title": "Kingston Spire Jade Crystal Custom Award",
+    "short_description": "A tower of jade crystal on a clear pedestal base, personalized for the moment — a substantial, display-worthy way to recognize a standout achievement.",
+    "at_a_glance_buyer": [
+      "Order just one — no minimum — so you can honor a single recipient or a milestone moment without buying in bulk.",
+      "Its weight and gallery-quality presence make recognition feel as significant as the achievement it marks.",
+      "Personalized with the name and moment, it stays on display — keeping the recognition visible long after the ceremony."
+    ],
+    "long_description": "The Kingston Spire turns recognition into something a recipient wants to keep in view. Rising as a faceted tower of jade crystal on a clear pedestal base, it has real heft in the hand — the kind of weight that tells someone their contribution mattered. The deep green crystal catches and bends light across its thick cut edges, giving the piece a gallery-quality presence whether it sits on a desk, a shelf, or a mantel. Personalize it with a name, a date, and the achievement, and it stops being a generic trophy and becomes that person's award. Because there's no minimum, it works just as well for a single service milestone or top-performer honor as it does for a full slate of annual awards — and it arrives in a black gift box, ready to present.",
+    "benefit_bullets": [
+      "**No minimum to order:** Recognize one person or one moment without committing to a bulk run — order a single award when that's exactly what the occasion calls for.",
+      "**Recognition that feels earned:** The substantial weight and faceted jade crystal give the award a premium presence that signals the achievement is worth marking.",
+      "**Stays on display:** Personalized and display-worthy, it keeps the recipient's accomplishment — and your organization's appreciation — visible day after day."
+    ],
+    "product_highlights": [
+      "Solid jade crystal in a faceted tower form with thick cut edges",
+      "Clear pedestal base that lifts and frames the piece",
+      "Deep jade-green hue",
+      "Arrives in a black gift box"
+    ],
+    "decoration_prose": "The Kingston Spire is made to be personalized — a name, a date, a title, or an organization's logo applied to the crystal so each award is unique to its recipient. Personalization is part of the piece, turning a standout crystal form into a one-of-a-kind honor for the person or milestone being recognized.",
+    "spec_table": [
+      { "label": "Material", "value": "Jade Crystal" },
+      { "label": "Height", "value": "6\"" },
+      { "label": "Per-Unit Personalization", "value": "Yes" }
+    ],
+    "seo": {
+      "urlSlug": "kingston-spire-jade-crystal-award",
+      "metaTitle": "Kingston Spire Jade Crystal Custom Award | PromotionPros",
+      "metaDescription": "Personalized Kingston Spire jade crystal award — a faceted tower on a clear pedestal base for employee recognition and service milestones. No minimum; order just one. Arrives gift-boxed."
+    },
+    "google_merchant_description": "Kingston Spire Jade Crystal Award personalized for recognition. A faceted tower of solid jade crystal with thick cut edges, set on a clear pedestal base, in a deep jade-green hue with a substantial, gallery-quality presence. Personalization is included, so each award is unique to its recipient, and there is no minimum — order a single award or many. Arrives in a black gift box, ready to present for employee recognition, service milestones, and achievement honors."
+  },
+  "platform": {
+    "price": "$48.00", "priceAt": "/ ea",
+    "tiers": "No minimum — order just one. Volume pricing applies on larger recognition programs.",
+    "rating": "4.9", "reviewCount": 47,
+    "ratingHist": [["5",94],["4",4],["3",2],["2",0],["1",0]],
+    "swatches": null,
+    "production": "6-8 business days after art approval",
+    "delivery": "Arrives by Thu, Jun 11 with standard shipping",
+    "freeShip": "Free shipping over $250",
+    "decoMethods": [
+      ["Laser Engraving", "Front face · 1 location"]
+    ],
+    "sizing": null,
+    "xsell": [["Summit Optical Crystal Award", "4.9 (61)"],["Apex Glass Obelisk", "4.8 (43)"],["Beveled Crystal Plaque", "4.9 (118)"],["Faceted Diamond Award", "4.7 (39)"]]
+  }
+ }
+]
+</script>
+
+<script>
+/* ---------- helpers ---------- */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+/* render **bold** -> <strong>, escaping everything else */
+function md(s){
+  return esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+/* seoContent field tag */
+const ftag = name => `<span class="ftag">${esc(name)}</span>`;
+/* platform badge */
+const ptag = (t='platform') => `<span class="ptag">${esc(t)}</span>`;
+
+const ICONS = {
+  cup:  '<path d="M5 8h11v6a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5z"/><path d="M16 9h2.5a2.5 2.5 0 0 1 0 5H16"/><path d="M7 3v2M10 2v3M13 3v2"/>',
+  shirt:'<path d="M8 3l4 3 4-3 4 3-2.5 3L16 8v11H8V8L6.5 9 4 6z"/>',
+  award:'<circle cx="12" cy="9" r="5"/><path d="M9 13l-2 8 5-3 5 3-2-8"/>',
+  star: '<path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8-4.3-4.1 5.9-.9z"/>'
+};
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5L20 6"/></svg>';
+
+const DATA = JSON.parse(document.getElementById('productsData').textContent);
+let CUR = null;
+
+function findByHash(){
+  const h = decodeURIComponent(location.hash.replace(/^#/,''));
+  return DATA.find(p => p.id === h) || DATA[0];
+}
+
+/* ---------- product navbar ---------- */
+function buildNav(){
+  const html = `
+    <div class="pnav-lead"><span class="pl-tag">PDP v4</span><span class="pl-sub">3 products · hand-authored copy</span></div>` +
+    DATA.map(p => `
+      <button data-id="${p.id}" class="${p.id===CUR.id?'on':''}">
+        <span class="case">${esc(p.navCase)}</span>
+        <span class="pname">${esc(p.content.title)}</span>
+      </button>`).join('');
+  document.getElementById('pnav').innerHTML = html;
+}
+
+/* ---------- breadcrumb (platform) ---------- */
+function buildCrumb(){
+  const c = CUR.crumb;
+  const links = c.map((seg,i)=> i===c.length-1
+    ? `<span style="color:var(--ink);font-weight:700">${esc(seg)}</span>`
+    : `<a href="#">${esc(seg)}</a>`).join(' <span style="color:var(--muted)">&rsaquo;</span> ');
+  document.getElementById('crumb').innerHTML = `${links} <span class="ptag" style="margin-left:6px">platform</span>`;
+}
+
+/* ---------- gallery (platform) ---------- */
+function buildGallery(){
+  document.getElementById('galIco').innerHTML = ICONS[CUR.icon] || ICONS.star;
+  const thumbs = [0,1,2,3];
+  document.getElementById('galThumbs').innerHTML = thumbs.map((t,i)=>
+    `<div class="t ${i===0?'on':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">${ICONS[CUR.icon]||ICONS.star}</svg></div>`).join('');
+}
+
+/* ---------- at-a-glance (seoContent) ---------- */
+function buildGlance(){
+  const items = CUR.content.at_a_glance_buyer || [];
+  if(!items.length){ document.getElementById('glance').innerHTML=''; return; }
+  document.getElementById('glance').innerHTML = `
+    <div class="glance">
+      <div class="glance-hd"><b>Key features at-a-glance</b> ${ftag('at_a_glance_buyer[]')}</div>
+      <ul>${items.map(it=>`<li>${CHECK}${esc(it)}</li>`).join('')}</ul>
+    </div>`;
+}
+
+/* ---------- buy box ---------- */
+function buildBuybox(){
+  const c = CUR.content, pf = CUR.platform;
+
+  /* price/tiers — platform */
+  const price = `
+    <div class="plat-block">
+      <div class="pb-head"><span class="pb-ttl">Pricing &amp; quantity breaks</span> ${ptag()}</div>
+      <div class="bb-price"><span class="amt">${esc(pf.price)}</span><span class="ea">${esc(pf.priceAt)}</span></div>
+      <div class="bb-perunit">${esc(pf.tiers)}</div>
+      <div class="plat-note">Rendered from catalog pricing — seoContent never carries price/tier values.</div>
+    </div>`;
+
+  /* fulfillment — platform */
+  const fulfil = `
+    <div class="plat-block">
+      <div class="pb-head"><span class="pb-ttl">Production &amp; delivery</span> ${ptag()}</div>
+      <div class="fulfil">
+        <div class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Production: <b>${esc(pf.production)}</b></span></div>
+        <div class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h13v10H3z"/><path d="M16 10h4l1 3v4h-5z"/><circle cx="7" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg><span>${esc(pf.delivery)}</span></div>
+        <div class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l5 5L20 6"/></svg><span class="hi">${esc(pf.freeShip)}</span></div>
+      </div>
+    </div>`;
+
+  /* color — platform; some products have none */
+  const swatches = pf.swatches
+    ? `<div class="plat-block">
+         <div class="lbl" style="margin-bottom:9px">Color ${ptag()}</div>
+         <div class="swatches">${pf.swatches.map((s,i)=>`<span class="swatch ${i===0||s[2]?'on':''}" style="background:#${s[1]}" title="${esc(s[0])}"></span>`).join('')}</div>
+         <div style="font-size:13px;margin-top:8px">Color: <b>${esc(pf.swatches[0][0])}</b></div>
+         <div class="plat-note">Swatch UI &amp; counts are platform-rendered. seoContent must not enumerate color options.</div>
+       </div>`
+    : `<div class="plat-block">
+         <div class="lbl" style="margin-bottom:4px">Color ${ptag()}</div>
+         <div style="font-size:13px;color:var(--text)">Single finish — no color selector for this item.</div>
+       </div>`;
+
+  /* risk reducers — platform */
+  const trust = `
+    <div class="trust-row">
+      <span>${ptag()}</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-8 10-8 10S4 17 4 12V6z"/></svg>100% Guarantee</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h13v10H3z"/></svg>Free Sample</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-3"/></svg>Easy Returns</span>
+    </div>`;
+
+  document.getElementById('buybox').innerHTML = `
+    <div class="bb-titlerow"><h1 class="bb-title" style="margin:0">${esc(c.title)}</h1> ${ftag('title')}</div>
+    <div class="bb-subrow"><div class="bb-sub">${esc(c.short_description)}</div>${ftag('short_description')}</div>
+    <div class="bb-rating"><span class="stars">★★★★★</span> <b>${esc(pf.rating)}</b> <a href="#reviews">(${pf.reviewCount} reviews)</a> ${ptag()}</div>
+    <div class="bb-block" style="border-top:none;padding-top:14px">${price}</div>
+    <div class="bb-block">${fulfil}</div>
+    <div class="bb-block">${swatches}</div>
+    <div class="bb-block">
+      <div class="lbl">Quantity ${ptag()}</div>
+      <div class="qty-cta"><input class="qty-input" value="${pf.swatches?'144':'1'}"><button class="btn-cta">Customize Your Product</button></div>
+      ${trust}
+    </div>`;
+}
+
+/* ---------- content sections ---------- */
+function sections(){
+  const c = CUR.content, pf = CUR.platform;
+  const secs = [];
+
+  /* DESCRIPTION — long_description + benefit_bullets + product_highlights (all seoContent) */
+  const hasHighlights = (c.product_highlights||[]).length>0;
+  secs.push({ title:'Description', open:true, body:
+    `<div class="subhd">Overview ${ftag('long_description')}</div>
+     <p class="prose">${esc(c.long_description)}</p>
+     <div class="subhd">Why buyers choose it ${ftag('benefit_bullets[]')}</div>
+     <ul class="flist">${(c.benefit_bullets||[]).map(b=>`<li>${md(b)}</li>`).join('')}</ul>` +
+    (hasHighlights
+      ? `<div class="subhd">Product highlights ${ftag('product_highlights[]')}</div>
+         <div class="highlights">${c.product_highlights.map(h=>`<div class="hl"><svg class="hi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg><p>${esc(h)}</p></div>`).join('')}</div>`
+      : '')
+  });
+
+  /* DECORATION — decoration_prose (seoContent) + per-method UI (platform) */
+  const methods = pf.decoMethods||[];
+  const decoBody =
+    `<p class="deco-prose">${esc(c.decoration_prose)}</p>
+     <div style="margin:4px 0 6px">${ftag('decoration_prose')}</div>
+     <div class="subhd" style="margin-top:16px">Available methods ${ptag()}</div>` +
+    (methods.length
+      ? `<div class="deco-mini">${methods.map(m=>`<div class="deco-row"><span class="dn">${esc(m[0])}</span><span class="dp">${esc(m[1])}</span></div>`).join('')}</div>
+         <div class="plat-note" style="max-width:680px">Per-method facts (area · colors · locations · setup) are platform-rendered from the imprint config — not part of seoContent's decoration_prose.</div>`
+      : `<div class="deco-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg><div><b>Method options shown at the Customize step</b><p>Per-method imprint details are platform-rendered; seoContent supplies the overview prose above.</p></div></div>`);
+  secs.push({ title:'Decoration &amp; Imprint', badge:(methods.length?methods.length+(methods.length>1?' methods':' method'):''), open:true, body: decoBody });
+
+  /* SPECIFICATIONS — spec_table (seoContent) */
+  const st = c.spec_table||[];
+  secs.push({ title:'Specifications', open:true, body:
+    (st.length
+      ? `<div class="subhd" style="margin-top:2px">Product attributes ${ftag('spec_table[]')}</div>
+         <table class="spectable">${st.map(r=>`<tr><td>${esc(r.label)}</td><td>${esc(r.value)}</td></tr>`).join('')}</table>`
+      : `<p class="prose">No structured attributes provided for this item. ${ftag('spec_table[]')}</p>`)
+  });
+
+  /* SIZING & FIT — platform (apparel only) */
+  if(pf.sizing){
+    const s = pf.sizing;
+    secs.push({ title:'Sizing &amp; Fit', open:false, body:
+      `<div class="plat-block" style="max-width:600px">
+         <div class="pb-head"><span class="pb-ttl">Size chart</span> ${ptag()}</div>
+         <p style="font-size:13.5px;color:var(--ink);margin-bottom:12px">${esc(s.note)}</p>
+         <table class="size-tbl"><tr>${s.cols.map(col=>`<th>${esc(col)}</th>`).join('')}</tr>
+           ${s.rows.map(r=>`<tr>${r.map((cell,i)=>i===0?`<th>${esc(cell)}</th>`:`<td>${esc(cell)}</td>`).join('')}</tr>`).join('')}</table>
+         <div class="plat-note">Size run &amp; measurements are platform-rendered. seoContent never enumerates sizes (only fit/construction as features).</div>
+       </div>`
+    });
+  }
+
+  /* REVIEWS — platform */
+  secs.push({ title:'Reviews', badge:pf.rating+' ★', open:false, body:
+    `<div id="reviews"></div>
+     <div class="plat-block" style="max-width:700px">
+       <div class="pb-head"><span class="pb-ttl">Customer reviews</span> ${ptag()}</div>
+       <div class="rev-top">
+         <div class="rev-score"><div class="big">${esc(pf.rating)}</div><div class="st">★★★★★</div><div class="ct">${pf.reviewCount} reviews</div></div>
+         <div class="rev-hist">${pf.ratingHist.map(r=>`<div class="hist-row"><span>${r[0]}★</span><span class="bar"><span class="fill" style="width:${r[1]}%"></span></span><span>${r[1]}%</span></div>`).join('')}</div>
+       </div>
+       <div class="plat-note">Ratings &amp; reviews are platform-rendered (ShopperApproved). Not seoContent — and never restated in the copy.</div>
+     </div>`
+  });
+
+  /* SHIPPING, PRODUCTION & RETURNS — platform */
+  secs.push({ title:'Shipping, Production &amp; Returns', open:false, body:
+    `<div class="pb-head"><span class="pb-ttl" style="font-size:12px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--plat)">Fulfillment &amp; policies</span> ${ptag()}</div>
+     <div class="ship-grid" style="margin-top:10px">
+       <div class="ship-card"><b>Production</b><p>${esc(pf.production)}. Rush available — ask your rep.</p></div>
+       <div class="ship-card"><b>Delivery</b><p>${esc(pf.delivery)}. ${esc(pf.freeShip)}.</p></div>
+       <div class="ship-card"><b>Returns</b><p>Decorated items are custom-made; we replace defects or printing errors at no charge.</p></div>
+       <div class="ship-card"><b>Guarantee</b><p>100% satisfaction guarantee on quality and on-time delivery.</p></div>
+     </div>
+     <div class="plat-note">Production/shipping/returns are platform-rendered. seoContent excludes lead times, rush, and delivery dates.</div>`
+  });
+
+  /* YOU MIGHT ALSO LIKE — platform */
+  secs.push({ title:'You might also like', open:true, body:
+    `<div class="pb-head"><span class="pb-ttl" style="font-size:12px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--plat)">Related products</span> ${ptag()}</div>
+     <div class="xsell" style="margin-top:10px">${pf.xsell.map(x=>`<div class="xcard"><div class="xi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">${ICONS[CUR.icon]||ICONS.star}</svg></div><div class="xb"><div class="xn">${esc(x[0])}</div><div class="xr">★ ${esc(x[1])}</div></div></div>`).join('')}</div>
+     <div class="plat-note">Cross-sell is platform-rendered (recommendation engine) — not seoContent.</div>`
+  });
+
+  return secs;
+}
+
+function buildSections(){
+  document.getElementById('sections').innerHTML = sections().map(s=>`
+    <div class="psec ${s.open?'open':''}">
+      <button class="psec-hdr" data-sec-toggle><span class="psec-title">${s.title}${s.badge?` <span class="badge">${s.badge}</span>`:''}</span>
+        <svg class="psec-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="psec-body">${s.body}</div>
+    </div>`).join('');
+}
+
+/* ---------- SEO / Google reviewer panel (off-PDP-body) ---------- */
+function buildSeoPanel(){
+  const seo = CUR.content.seo || {};
+  const gm = CUR.content.google_merchant_description || '';
+  const dom = 'promotionpros.com';
+  document.getElementById('seoPanel').innerHTML = `
+    <button class="seo-hdr" data-seo-toggle>
+      <span class="stag">SEO / GOOGLE</span> Off-PDP-body fields — seoContent also emits these (reviewer panel)
+      <svg class="schev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="seo-body">
+      <div class="seo-field"><div class="fl">seo.urlSlug</div><div class="fv">/${esc(seo.urlSlug||'')}</div></div>
+      <div class="seo-field"><div class="fl">seo.metaTitle</div><div class="fv">${esc(seo.metaTitle||'')}</div></div>
+      <div class="seo-field"><div class="fl">seo.metaDescription</div><div class="fv">${esc(seo.metaDescription||'')}</div></div>
+      <div class="seo-field">
+        <div class="fl">Google SERP preview</div>
+        <div class="serp">
+          <div class="surl"><span class="dom">${dom}</span> › ${esc(seo.urlSlug||'')}</div>
+          <div class="stit">${esc(seo.metaTitle||'')}</div>
+          <div class="sdesc">${esc(seo.metaDescription||'')}</div>
+        </div>
+      </div>
+      <div class="seo-field"><div class="fl">google_merchant_description <span class="off">Google Merchant — not on PDP body</span></div><div class="fv">${esc(gm)}</div></div>
+    </div>`;
+}
+
+/* ---------- head meta ---------- */
+function applyMeta(){
+  const seo = CUR.content.seo||{};
+  document.title = (seo.metaTitle||CUR.content.title||'PDP v4') ;
+  document.getElementById('metaDescTag').setAttribute('content', seo.metaDescription||'');
+}
+
+/* ---------- render ---------- */
+function render(){
+  CUR = findByHash();
+  applyMeta();
+  buildNav(); buildCrumb(); buildGallery(); buildGlance(); buildBuybox(); buildSections(); buildSeoPanel();
+  window.scrollTo({top:0});
+}
+
+document.addEventListener('click', e=>{
+  const nb = e.target.closest('[data-id]');
+  if(nb){ location.hash = nb.dataset.id; return; }
+  const st = e.target.closest('[data-sec-toggle]');
+  if(st){ st.closest('.psec').classList.toggle('open'); return; }
+  const sp = e.target.closest('[data-seo-toggle]');
+  if(sp){ sp.closest('.seo-panel').classList.toggle('open'); return; }
+});
+window.addEventListener('hashchange', render);
+render();
+</script>
+</body>
+</html>
